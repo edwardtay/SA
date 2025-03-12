@@ -2,7 +2,7 @@ import json
 from pprint import pformat, pprint
 import requests
 from src.datatypes import StrategyData
-from typing import List, TypedDict
+from typing import List, TypedDict, Any
 import dataclasses
 
 
@@ -84,83 +84,95 @@ class RAGClient:
         self.agent_id = agent_id
         self.session_id = session_id
 
-    def save_result_batch(self, batch_data: List[StrategyData]) -> requests.Response:
+    def save_result_batch(self, batch_data: List[StrategyData]) -> Any:
         """
         Save a batch of strategy data to the RAG system.
         
-        This method takes a list of StrategyData objects and sends them to the RAG API
-        for storage and later retrieval. Each strategy is converted to the appropriate
-        format expected by the API.
+        This method sends multiple strategy data items to the RAG API in a single request.
         
         Args:
-            batch_data (List[StrategyData]): List of strategy data objects to save
+            batch_data (List[StrategyData]): List of strategy data to save
             
         Returns:
-            requests.Response: The response from the API
+            Any: Response from the API
             
         Raises:
             requests.HTTPError: If the API request fails
         """
-        url = f"{self.base_url}/save_result_batch"
+        if not batch_data:
+            print("No batch data to save")
+            return {}
+            
+        try:
+            url = f"{self.base_url}/save_result_batch"
 
-        payload = []
+            payload = []
 
-        for data in batch_data:
-            payload.append(
-                {
-                    "strategy": data.summarized_desc,
-                    "strategy_data": json.dumps(dataclasses.asdict(data)),
-                    "reference_id": data.strategy_id,
-                    "agent_id": self.agent_id,
-                    "session_id": self.session_id,
-                }
-            )
+            for data in batch_data:
+                payload.append(
+                    {
+                        "strategy": data.summarized_desc,
+                        "strategy_data": json.dumps(dataclasses.asdict(data)),
+                        "reference_id": data.strategy_id,
+                        "agent_id": self.agent_id,
+                        "session_id": self.session_id,
+                    }
+                )
 
-        response = requests.post(url, json=payload)
-        response.raise_for_status()
+            response = requests.post(url, json=payload, timeout=5)
+            response.raise_for_status()
 
-        r = response.json()
+            r = response.json()
 
-        return r
+            return r
+        except Exception as e:
+            print(f"Warning: Failed to save result batch to RAG: {e}")
+            return {}
 
     def relevant_strategy_raw(self, query: str) -> List[StrategyData]:
         """
         Retrieve strategies relevant to the given query.
         
         This method searches the RAG system for strategies that are semantically
-        similar to the provided query. It returns a list of StrategyData objects
-        sorted by relevance.
+        similar to the provided query.
         
         Args:
-            query (str): The search query to find relevant strategies
+            query (str): The search query
             
         Returns:
-            List[StrategyData]: List of relevant strategy data objects
+            List[StrategyData]: List of relevant strategies
             
         Raises:
             requests.HTTPError: If the API request fails
         """
-        url = f"{self.base_url}/relevant_strategy_raw"
+        try:
+            url = f"{self.base_url}/relevant_strategy"
 
-        payload = {
-            "query": query,
-            "agent_id": self.agent_id,
-            "session_id": self.session_id,
-            "top_k": 1,
-            "threshold": 0.5,
-        }
+            payload = {
+                "query": query,
+                "agent_id": self.agent_id,
+                "session_id": self.session_id,
+            }
 
-        response = requests.post(url, json=payload)
-        response.raise_for_status()
+            response = requests.post(url, json=payload, timeout=5)
+            response.raise_for_status()
 
-        r: StrategyResponse = response.json()
-        pprint(r)
+            r: StrategyResponse = response.json()
 
-        strategy_datas = []
-        for subdata in r["data"]:
-            strategy_data: StrategyData = json.loads(
-                subdata["metadata"]["strategy_data"]
-            )
-            strategy_datas.append(strategy_data)
+            result = []
+            for item in r["data"]:
+                strategy_data = json.loads(item["metadata"]["strategy_data"])
+                result.append(
+                    StrategyData(
+                        strategy_id=strategy_data["strategy_id"],
+                        agent_id=strategy_data["agent_id"],
+                        parameters=strategy_data["parameters"],
+                        summarized_desc=strategy_data["summarized_desc"],
+                        full_desc=strategy_data["full_desc"],
+                    )
+                )
 
-        return strategy_datas
+            return result
+        except Exception as e:
+            print(f"Warning: Failed to get relevant strategies from RAG: {e}")
+            return []

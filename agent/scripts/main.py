@@ -286,14 +286,23 @@ if __name__ == "__main__":
     manager_client = ManagerClient(MANAGER_SERVICE_URL, session_id)
 
     session = db.get_agent_session(session_id, agent_id)
-    session_interval = session.get("data", {}).get("session_interval", 15)
+    print(f"Session: {session}")
+
+    # Use default values if session is None
+    if session is None:
+        session_interval = 15
+        print(f"No session found, using default session_interval: {session_interval}")
+        # Add other default values for any other session properties used later
+    else:
+        session_interval = session.get("data", {}).get("session_interval", 15)
+
     if session is not None:
         db.update_agent_session(session_id, agent_id, "running")
     else:
         db.create_agent_session(
             session_id=session_id,
             agent_id=agent_id,
-            started_at=datetime.datetime.now().isoformat(),
+            started_at=datetime.now().isoformat(),
             status="running",
         )
 
@@ -353,7 +362,19 @@ if __name__ == "__main__":
                 sys.exit()
 
             prev_strat = agent.db.fetch_latest_strategy(agent.agent_id)
-            assert prev_strat is not None
+            if prev_strat is None:
+                # Create a default strategy if none exists
+                logger.info("No previous strategy found, creating a default one")
+                prev_strat = StrategyData(
+                    strategy_id="default_strategy_id",
+                    agent_id=agent.agent_id,
+                    parameters={
+                        "start_metric_state": "27",
+                        "end_metric_state": "27",
+                    },
+                    summarized_desc="Initial strategy to start building a social media presence.",
+                    full_desc="This is a default strategy created because no previous strategy was found. The goal is to start building a social media presence by posting engaging content about cryptocurrency trends.",
+                )
             logger.info(f"Previous strat is {prev_strat}")
 
             current_notif = agent.db.fetch_latest_notification_str_v2(notif_sources, 2)

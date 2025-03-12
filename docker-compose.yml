@@ -1,14 +1,14 @@
 services:
-  meta-swap-api:
-    image: superioragents/meta-swap-api
-    build:
-      context: meta-swap-api
-      dockerfile: Dockerfile
-    env_file:
-      - meta-swap-api/.env.example
-    ports:
-      - "${TRADE_API_PORT:-9009}:${TRADE_API_PORT:-9009}"
-    restart: unless-stopped
+  # meta-swap-api:
+  #   image: superioragents/meta-swap-api
+  #   build:
+  #     context: meta-swap-api
+  #     dockerfile: Dockerfile
+  #   env_file:
+  #     - meta-swap-api/.env.example
+  #   ports:
+  #     - "${TRADE_API_PORT:-9009}:${TRADE_API_PORT:-9009}"
+  #   restart: unless-stopped
 
   # agent-daemon:
   #   image: superioragents/agent-daemon
@@ -57,9 +57,9 @@ services:
     restart: unless-stopped
 
   rest-api:
-    image: superioragents/crud-api
+    image: superioragents/rest-api
     build:
-      context: crud-api
+      context: rest-api
       dockerfile: Dockerfile
     environment:
       - MYSQL_HOST=mysql

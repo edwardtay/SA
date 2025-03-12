@@ -108,9 +108,21 @@ def unassisted_flow(
             # agent.chat_history += new_ch
             agent.db.insert_chat_history(session_id, new_ch)
 
+            # Strip markdown code block delimiters if present
+            cleaned_research_code = research_code
+            if cleaned_research_code.startswith("```"):
+                # Remove opening code block
+                first_newline = cleaned_research_code.find("\n")
+                if first_newline != -1:
+                    cleaned_research_code = cleaned_research_code[first_newline + 1:]
+                
+                # Remove closing code block
+                if "```" in cleaned_research_code:
+                    cleaned_research_code = cleaned_research_code[:cleaned_research_code.rfind("```")]
+            
             logger.info("Running the research code in conatiner...")
             code_execution_result = agent.container_manager.run_code_in_con(
-                research_code, "trader_research_code"
+                cleaned_research_code, "trader_research_code"
             )
             research_code_output, _ = code_execution_result.unwrap()
 
@@ -199,9 +211,21 @@ def unassisted_flow(
             # agent.chat_history += new_ch
             agent.db.insert_chat_history(session_id, new_ch)
 
+            # Strip markdown code block delimiters if present
+            cleaned_marketing_code = marketing_code
+            if cleaned_marketing_code.startswith("```"):
+                # Remove opening code block
+                first_newline = cleaned_marketing_code.find("\n")
+                if first_newline != -1:
+                    cleaned_marketing_code = cleaned_marketing_code[first_newline + 1:]
+                
+                # Remove closing code block
+                if "```" in cleaned_marketing_code:
+                    cleaned_marketing_code = cleaned_marketing_code[:cleaned_marketing_code.rfind("```")]
+
             logger.info("Running the marketing code in conatiner...")
             code_execution_result = agent.container_manager.run_code_in_con(
-                marketing_code, "marketing_market_on_daily"
+                cleaned_marketing_code, "marketing_market_on_daily"
             )
             marketing_code_output, reflected_code = code_execution_result.unwrap()
 
